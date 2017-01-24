@@ -1,3 +1,5 @@
 HelloWorld/.idea
 HelloWorld/.gradle
 HelloWorld/build
+gradle.properties
+local.properties
