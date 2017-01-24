@@ -1,0 +1,106 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath 'org.unbroken-dome.gradle-plugins:gradle-testsets-plugin:1.3.2'
+        classpath "gradle.plugin.com.dorongold.plugins:task-tree:1.2.2"
+    }
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+apply plugin: 'java'
+apply plugin: 'org.unbroken-dome.test-sets'
+apply plugin: "com.dorongold.task-tree"
+
+task copyMainResources(dependsOn: compileJava) {
+    doLast {
+        copy {
+            from "${projectDir}/src/main/resources"
+            into "${buildDir}/classes/main"
+        }
+    }
+}
+
+// copy the resources from source to build directory
+task copyTestResources(dependsOn: "processTestResources") {
+    // need to copy .xml file to build folder - using Spring @autowired and datasource values in junit tests
+    doLast {
+        copy {
+            from "${projectDir}/src/test/java/hello/"
+            into "${buildDir}/classes/test/hello"
+            include '*.xml'
+        }
+        copy {
+            from "${projectDir}/src/test/resources"
+            into "${buildDir}/classes/test/"
+        }
+    }
+}
+
+test.dependsOn copyTestResources
+
+// add the integration tests
+testSets {
+    integrationTest
+}
+
+// copy the resources from source to integrationTest build directory
+task copyIntegrationTestResources(dependsOn: "processTestResources") {
+    // need to copy .xml file to build folder - using Spring @autowired and datasource values in junit tests
+    doLast {
+        // integrationTest:
+        copy {
+            from "${projectDir}/src/integrationTest/java/hello/"
+            into "${buildDir}/classes/integrationTest/hello/"
+            include '*.xml'
+        }
+        copy {
+            from "${projectDir}/src/test/resources"
+            into "${buildDir}/classes/integrationTest/"
+        }
+        copy {
+            from "${projectDir}/src/integrationTest/resources"
+            into "${buildDir}/classes/integrationTest/"
+        }
+    }
+}
+
+sourceSets {
+    integrationTestCompile {
+        java {
+            srcDir 'src/integrationTest/java'
+        }
+        resources {
+            srcDir 'src/integrationTest/resources'
+        }
+        compileClasspath += sourceSets.main.runtimeClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
+}
+
+integrationTest.mustRunAfter test
+integrationTest.dependsOn copyIntegrationTestResources
+build.dependsOn integrationTest
+
+dependencies {
+    def springVersion = "4.3.5.RELEASE"
+
+    testCompile  "org.springframework.boot:spring-boot-test:1.4.3.RELEASE"
+    testCompile  "org.springframework:spring-test:${springVersion}"
+    testCompile  "junit:junit:4.12"
+
+    integrationTestCompile  "org.springframework.boot:spring-boot-test:1.4.3.RELEASE"
+    integrationTestCompile  "org.springframework:spring-test:${springVersion}"
+    integrationTestCompile  "junit:junit:4.12"
+}
+
+
